@@ -1,0 +1,1211 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gestao Financeira Pessoal</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4f6f8;
+        --panel: #ffffff;
+        --ink: #17212b;
+        --muted: #607080;
+        --line: #d9e0e7;
+        --accent: #0f766e;
+        --accent-dark: #0b5f59;
+        --danger: #b42318;
+        --warn: #b54708;
+        --ok: #067647;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      header {
+        background: #111827;
+        color: #fff;
+        padding: 20px 24px;
+      }
+
+      header h1 {
+        margin: 0;
+        font-size: 22px;
+      }
+
+      main {
+        width: min(1180px, calc(100% - 24px));
+        margin: 18px auto 40px;
+      }
+
+      .toolbar,
+      .grid,
+      .cards,
+      .dashboard-charts,
+      .table-panel {
+        margin-bottom: 16px;
+      }
+
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+
+      button {
+        border: 0;
+        border-radius: 6px;
+        background: var(--accent);
+        color: #fff;
+        cursor: pointer;
+        font-weight: 700;
+        min-height: 38px;
+        padding: 9px 14px;
+      }
+
+      button:hover {
+        background: var(--accent-dark);
+      }
+
+      button.secondary {
+        background: #334155;
+      }
+
+      button.danger {
+        background: var(--danger);
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: .65;
+      }
+
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .card,
+      .chart-panel,
+      .panel,
+      .table-panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      .card {
+        padding: 16px;
+        min-height: 104px;
+      }
+
+      .card span {
+        color: var(--muted);
+        display: block;
+        font-size: 13px;
+        margin-bottom: 10px;
+      }
+
+      .card strong {
+        display: block;
+        font-size: 24px;
+      }
+
+      .dashboard-charts {
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr);
+        gap: 12px;
+      }
+
+      .chart-panel {
+        min-height: 280px;
+        padding: 16px;
+      }
+
+      .chart-panel h2 {
+        font-size: 17px;
+        margin: 0 0 14px;
+      }
+
+      .bar-chart {
+        display: grid;
+        gap: 10px;
+      }
+
+      .bar-row {
+        align-items: center;
+        display: grid;
+        gap: 8px;
+        grid-template-columns: 74px 1fr 94px;
+      }
+
+      .bar-label,
+      .bar-value {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .bar-track {
+        display: grid;
+        gap: 3px;
+        min-width: 120px;
+      }
+
+      .bar-receita,
+      .bar-despesa {
+        border-radius: 999px;
+        height: 8px;
+        min-width: 2px;
+      }
+
+      .bar-receita {
+        background: var(--ok);
+      }
+
+      .bar-despesa {
+        background: var(--danger);
+      }
+
+      .category-chart {
+        display: grid;
+        gap: 11px;
+      }
+
+      .category-row {
+        display: grid;
+        gap: 5px;
+      }
+
+      .category-meta {
+        align-items: center;
+        color: var(--muted);
+        display: flex;
+        font-size: 12px;
+        justify-content: space-between;
+      }
+
+      .category-track {
+        background: #eef2f6;
+        border-radius: 999px;
+        height: 10px;
+        overflow: hidden;
+      }
+
+      .category-fill {
+        background: var(--danger);
+        height: 100%;
+        min-width: 2px;
+      }
+
+      .chart-legend {
+        align-items: center;
+        color: var(--muted);
+        display: flex;
+        flex-wrap: wrap;
+        font-size: 12px;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .legend-dot {
+        border-radius: 999px;
+        display: inline-block;
+        height: 10px;
+        margin-right: 5px;
+        width: 10px;
+      }
+
+      .legend-receita {
+        background: var(--ok);
+      }
+
+      .legend-despesa {
+        background: var(--danger);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(320px, 420px) 1fr;
+        gap: 16px;
+      }
+
+      .panel {
+        padding: 16px;
+      }
+
+      .panel h2,
+      .table-panel h2 {
+        font-size: 17px;
+        margin: 0 0 14px;
+      }
+
+      form {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      #formMeta {
+        margin-bottom: 16px;
+      }
+
+      label {
+        color: var(--muted);
+        display: grid;
+        font-size: 13px;
+        gap: 5px;
+      }
+
+      input,
+      select,
+      textarea {
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        color: var(--ink);
+        font: inherit;
+        min-height: 42px;
+        padding: 8px 10px;
+        width: 100%;
+      }
+
+      textarea {
+        min-height: 74px;
+        resize: vertical;
+      }
+
+      .span-2 {
+        grid-column: span 2;
+      }
+
+      .actions {
+        align-items: center;
+        display: flex;
+        gap: 8px;
+        grid-column: span 2;
+      }
+
+      .table-panel {
+        overflow: hidden;
+      }
+
+      .table-head {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: space-between;
+        padding: 16px;
+      }
+
+      .filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .filters input,
+      .filters select {
+        width: 160px;
+      }
+
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+
+      th,
+      td {
+        border-top: 1px solid var(--line);
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f8fafc;
+        color: #475569;
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+
+      td {
+        font-size: 14px;
+      }
+
+      .money {
+        text-align: right;
+        white-space: nowrap;
+      }
+
+      .badge {
+        border-radius: 999px;
+        display: inline-block;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 4px 8px;
+      }
+
+      .Receita,
+      .ok {
+        background: #dcfae6;
+        color: var(--ok);
+      }
+
+      .Despesa,
+      .danger-text {
+        background: #fee4e2;
+        color: var(--danger);
+      }
+
+      .warn {
+        background: #fef0c7;
+        color: var(--warn);
+      }
+
+      #status {
+        color: var(--muted);
+        min-height: 20px;
+      }
+
+      .toast {
+        background: #067647;
+        border-radius: 6px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, .18);
+        color: #fff;
+        font-size: 14px;
+        font-weight: 700;
+        max-width: min(360px, calc(100% - 24px));
+        opacity: 0;
+        padding: 12px 16px;
+        pointer-events: none;
+        position: fixed;
+        right: 16px;
+        top: 16px;
+        transform: translateY(-10px);
+        transition: opacity .2s ease, transform .2s ease;
+        z-index: 1000;
+      }
+
+      .toast.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .empty {
+        color: var(--muted);
+        padding: 18px;
+      }
+
+      @media (max-width: 860px) {
+        .dashboard-charts,
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .cards {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        form {
+          grid-template-columns: 1fr;
+        }
+
+        .span-2,
+        .actions {
+          grid-column: span 1;
+        }
+
+        .table-scroll {
+          overflow-x: auto;
+        }
+      }
+
+      @media (max-width: 600px) {
+        body {
+          overflow-x: hidden;
+        }
+
+        header {
+          padding: 16px;
+        }
+
+        header h1 {
+          font-size: 19px;
+        }
+
+        main {
+          margin: 12px auto 28px;
+          width: min(100% - 20px, 1180px);
+        }
+
+        .toolbar {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .toolbar button {
+          min-width: 0;
+          width: 100%;
+        }
+
+        #status {
+          grid-column: 1 / -1;
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+          font-size: 16px;
+          min-height: 44px;
+        }
+
+        .cards {
+          gap: 8px;
+        }
+
+        .card {
+          min-height: 92px;
+          padding: 13px;
+        }
+
+        .card span {
+          font-size: 12px;
+          margin-bottom: 8px;
+        }
+
+        .card strong {
+          font-size: 19px;
+          overflow-wrap: anywhere;
+        }
+
+        .panel,
+        .chart-panel {
+          padding: 14px;
+        }
+
+        .chart-panel {
+          min-height: 0;
+        }
+
+        .bar-row {
+          grid-template-columns: 58px minmax(0, 1fr);
+        }
+
+        .bar-track {
+          min-width: 0;
+        }
+
+        .bar-value {
+          grid-column: 2;
+          text-align: right;
+        }
+
+        .category-meta {
+          align-items: flex-start;
+          gap: 8px;
+        }
+
+        .category-meta span {
+          overflow-wrap: anywhere;
+        }
+
+        .actions {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .actions button {
+          width: 100%;
+        }
+
+        .table-head {
+          align-items: stretch;
+          display: grid;
+          padding: 14px;
+        }
+
+        .table-head h2 {
+          margin-bottom: 2px;
+        }
+
+        .filters {
+          display: grid;
+          grid-template-columns: 1fr;
+        }
+
+        .filters input,
+        .filters select {
+          width: 100%;
+        }
+
+        .table-scroll {
+          overflow: visible;
+        }
+
+        .responsive-table,
+        .responsive-table tbody,
+        .responsive-table tr,
+        .responsive-table td {
+          display: block;
+          width: 100%;
+        }
+
+        .responsive-table thead {
+          display: none;
+        }
+
+        .responsive-table tbody {
+          display: grid;
+          gap: 10px;
+          padding: 0 10px 10px;
+        }
+
+        .responsive-table tr {
+          background: #fff;
+          border: 1px solid var(--line);
+          border-radius: 8px;
+          padding: 8px 12px;
+        }
+
+        .responsive-table td {
+          align-items: flex-start;
+          border-top: 1px solid #edf1f5;
+          display: grid;
+          gap: 10px;
+          grid-template-columns: minmax(82px, .7fr) minmax(0, 1.3fr);
+          padding: 9px 0;
+          text-align: right;
+          overflow-wrap: anywhere;
+        }
+
+        .responsive-table td:first-child {
+          border-top: 0;
+        }
+
+        .responsive-table td::before {
+          color: var(--muted);
+          content: attr(data-label);
+          font-size: 11px;
+          font-weight: 700;
+          text-align: left;
+          text-transform: uppercase;
+        }
+
+        .responsive-table td.money {
+          text-align: right;
+        }
+
+        .responsive-table td.table-actions {
+          display: grid;
+          grid-template-columns: 82px minmax(0, 1fr);
+        }
+
+        .table-action-buttons {
+          display: grid;
+          gap: 8px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .table-action-buttons button {
+          padding: 8px;
+          width: 100%;
+        }
+
+        .responsive-table tr.empty-row {
+          padding: 0;
+        }
+
+        .responsive-table tr.empty-row td {
+          display: block;
+          text-align: center;
+        }
+
+        .responsive-table tr.empty-row td::before {
+          content: none;
+        }
+
+        .toast {
+          left: 10px;
+          max-width: none;
+          right: 10px;
+          top: 10px;
+        }
+      }
+
+      @media (max-width: 380px) {
+        .cards {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <header>
+      <h1>Gestao Financeira Pessoal</h1>
+    </header>
+
+    <main>
+      <div class="toolbar">
+        <button type="button" onclick="reloadApp()">Atualizar</button>
+        <button type="button" class="secondary" onclick="setupPlanilha()">Preparar planilha</button>
+        <span id="status"></span>
+      </div>
+
+      <section class="cards">
+        <div class="card">
+          <span>Receitas no mes</span>
+          <strong id="receitasMes">R$ 0,00</strong>
+        </div>
+        <div class="card">
+          <span>Despesas no mes</span>
+          <strong id="despesasMes">R$ 0,00</strong>
+        </div>
+        <div class="card">
+          <span>Saldo no mes</span>
+          <strong id="saldoMes">R$ 0,00</strong>
+        </div>
+        <div class="card">
+          <span>Maior categoria</span>
+          <strong id="maiorCategoria">-</strong>
+        </div>
+      </section>
+
+      <section class="dashboard-charts">
+        <div class="chart-panel">
+          <h2>Receitas e despesas por mes</h2>
+          <div id="graficoResumo" class="bar-chart"></div>
+          <div class="chart-legend">
+            <span><span class="legend-dot legend-receita"></span>Receitas</span>
+            <span><span class="legend-dot legend-despesa"></span>Despesas</span>
+          </div>
+        </div>
+
+        <div class="chart-panel">
+          <h2>Despesas por categoria</h2>
+          <div id="graficoCategorias" class="category-chart"></div>
+        </div>
+      </section>
+
+      <section class="grid">
+        <div class="panel">
+          <h2>Novo lancamento</h2>
+          <form id="formLancamento" onsubmit="salvarLancamento(event)">
+            <input type="hidden" id="id">
+
+            <label>
+              Data
+              <input type="date" id="data" required>
+            </label>
+
+            <label>
+              Tipo
+              <select id="tipo" required onchange="atualizarCategoriasPorTipo()"></select>
+            </label>
+
+            <label>
+              Categoria
+              <select id="categoria" required></select>
+            </label>
+
+            <label>
+              Subcategoria
+              <input type="text" id="subcategoria" list="subcategoriasLista" maxlength="80">
+              <datalist id="subcategoriasLista"></datalist>
+            </label>
+
+            <label class="span-2">
+              Descricao
+              <input type="text" id="descricao" maxlength="120" required>
+            </label>
+
+            <label>
+              Forma
+              <select id="forma" required></select>
+            </label>
+
+            <label>
+              Conta
+              <select id="conta" required></select>
+            </label>
+
+            <label>
+              Valor
+              <input type="number" id="valor" min="0.01" step="0.01" required>
+            </label>
+
+            <label>
+              Status
+              <select id="statusLancamento" required></select>
+            </label>
+
+            <label class="span-2">
+              Observacoes
+              <textarea id="observacoes"></textarea>
+            </label>
+
+            <div class="actions">
+              <button type="submit">Salvar</button>
+              <button type="button" class="secondary" onclick="limparFormulario()">Limpar</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <h2>Metas do mes</h2>
+          <form id="formMeta" onsubmit="salvarMeta(event)">
+            <label>
+              Categoria
+              <select id="metaCategoria" required></select>
+            </label>
+            <label>
+              Limite mensal
+              <input type="number" id="metaLimite" min="0" step="0.01" required>
+            </label>
+            <div class="actions">
+              <button type="submit">Salvar meta</button>
+            </div>
+          </form>
+          <div class="table-scroll">
+            <table class="responsive-table">
+              <thead>
+                <tr>
+                  <th>Categoria</th>
+                  <th class="money">Limite</th>
+                  <th class="money">Gasto</th>
+                  <th class="money">Diferenca</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="metasBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="table-panel">
+        <div class="table-head">
+          <h2>Lancamentos</h2>
+          <div class="filters">
+            <input type="month" id="filtroMes" onchange="filtrarLancamentos()">
+            <select id="filtroTipo" onchange="filtrarLancamentos()">
+              <option value="">Todos</option>
+              <option value="Receita">Receitas</option>
+              <option value="Despesa">Despesas</option>
+            </select>
+            <input type="search" id="filtroTexto" placeholder="Buscar" oninput="filtrarLancamentos()">
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table class="responsive-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Tipo</th>
+                <th>Categoria</th>
+                <th>Descricao</th>
+                <th>Conta</th>
+                <th>Status</th>
+                <th class="money">Valor</th>
+                <th>Acoes</th>
+              </tr>
+            </thead>
+            <tbody id="lancamentosBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const DEFAULT_LISTAS = {
+        tipos: ['Receita', 'Despesa'],
+        categoriasDespesa: ['Moradia', 'Alimentacao', 'Transporte', 'Saude', 'Educacao', 'Lazer', 'Assinaturas', 'Mercado', 'Cartao', 'Outros'],
+        categoriasReceita: ['Salario', 'Freelance', 'Investimentos', 'Reembolsos', 'Vendas', 'Presente', 'Outros'],
+        formas: ['Pix', 'Cartao Debito', 'Cartao Credito', 'Dinheiro', 'Boleto', 'Transferencia', 'Debito Automatico', 'Outros'],
+        contas: ['Conta Corrente', 'Carteira', 'Poupanca', 'Cartao 1', 'Cartao 2', 'Investimentos'],
+        status: ['Pago', 'Pendente', 'Previsto'],
+        subcategorias: ['', 'Aluguel', 'Condominio', 'Energia', 'Agua', 'Internet', 'Mercado', 'Combustivel', 'Medicamentos', 'Curso', 'Restaurante']
+      };
+
+      const state = {
+        listas: DEFAULT_LISTAS,
+        lancamentos: []
+      };
+
+      document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('data').value = new Date().toISOString().slice(0, 10);
+        document.getElementById('filtroMes').value = new Date().toISOString().slice(0, 7);
+        popularSelects();
+        reloadApp();
+      });
+
+      function setStatus(message, isError) {
+        const el = document.getElementById('status');
+        el.textContent = message || '';
+        el.style.color = isError ? '#b42318' : '#607080';
+      }
+
+      function showToast(message) {
+        const el = document.getElementById('toast');
+        el.textContent = message;
+        el.classList.add('show');
+        clearTimeout(showToast.timer);
+        showToast.timer = setTimeout(() => el.classList.remove('show'), 3500);
+      }
+
+      function callServer(method, args, onSuccess) {
+        setStatus('Processando...');
+        const runner = google.script.run
+          .withSuccessHandler(result => {
+            setStatus('');
+            onSuccess(result);
+          })
+          .withFailureHandler(error => {
+            setStatus(error && error.message ? error.message : String(error), true);
+            popularSelects();
+          });
+
+        args = args || [];
+        if (method === 'getBootstrapData') runner.getBootstrapData(args[0]);
+        if (method === 'setupPlanilha') runner.setupPlanilha();
+        if (method === 'salvarLancamento') runner.salvarLancamento(args[0]);
+        if (method === 'salvarMeta') runner.salvarMeta(args[0]);
+        if (method === 'excluirLancamento') runner.excluirLancamento(args[0]);
+        if (method === 'listarLancamentos') runner.listarLancamentos(args[0]);
+      }
+
+      function reloadApp(onComplete) {
+        const filtros = {
+          mes: value('filtroMes'),
+          tipo: value('filtroTipo'),
+          texto: value('filtroTexto'),
+          limite: 200
+        };
+        callServer('getBootstrapData', [filtros], data => {
+          data = data || {};
+          state.listas = mergeListas(data.listas);
+          popularSelects();
+          renderDashboard(data.dashboard || {}, data.resumo || []);
+          renderMetas(data.metas || []);
+          state.lancamentos = data.lancamentos || [];
+          renderLancamentos(state.lancamentos);
+          if (onComplete) onComplete();
+        });
+      }
+
+      function setupPlanilha() {
+        callServer('setupPlanilha', [], () => reloadApp());
+      }
+
+      function sincronizarAbasAuxiliares() {
+        google.script.run
+          .withFailureHandler(error => console.error('Falha ao sincronizar abas auxiliares:', error))
+          .recalcularDadosAuxiliares();
+      }
+
+      function popularSelects() {
+        state.listas = mergeListas(state.listas);
+        fillSelect('tipo', state.listas.tipos);
+        fillSelect('forma', state.listas.formas);
+        fillSelect('conta', state.listas.contas);
+        fillSelect('statusLancamento', state.listas.status);
+        fillDatalist('subcategoriasLista', state.listas.subcategorias);
+        fillSelect('metaCategoria', state.listas.categoriasDespesa);
+        atualizarCategoriasPorTipo();
+      }
+
+      function mergeListas(listas) {
+        listas = listas || {};
+        return {
+          tipos: listas.tipos && listas.tipos.length ? listas.tipos : DEFAULT_LISTAS.tipos,
+          categoriasDespesa: listas.categoriasDespesa && listas.categoriasDespesa.length ? listas.categoriasDespesa : DEFAULT_LISTAS.categoriasDespesa,
+          categoriasReceita: listas.categoriasReceita && listas.categoriasReceita.length ? listas.categoriasReceita : DEFAULT_LISTAS.categoriasReceita,
+          formas: listas.formas && listas.formas.length ? listas.formas : DEFAULT_LISTAS.formas,
+          contas: listas.contas && listas.contas.length ? listas.contas : DEFAULT_LISTAS.contas,
+          status: listas.status && listas.status.length ? listas.status : DEFAULT_LISTAS.status,
+          subcategorias: listas.subcategorias && listas.subcategorias.length ? [''].concat(listas.subcategorias) : DEFAULT_LISTAS.subcategorias
+        };
+      }
+
+      function fillSelect(id, values) {
+        const select = document.getElementById(id);
+        const current = select.value;
+        select.innerHTML = '';
+        values.forEach(value => {
+          const option = document.createElement('option');
+          option.value = value;
+          option.textContent = value || '-';
+          select.appendChild(option);
+        });
+        if (values.includes(current)) select.value = current;
+      }
+
+      function fillDatalist(id, values) {
+        const datalist = document.getElementById(id);
+        datalist.innerHTML = '';
+        values.filter(Boolean).forEach(value => {
+          const option = document.createElement('option');
+          option.value = value;
+          datalist.appendChild(option);
+        });
+      }
+
+      function atualizarCategoriasPorTipo() {
+        const tipo = document.getElementById('tipo').value;
+        const categorias = tipo === 'Receita'
+          ? state.listas.categoriasReceita || []
+          : state.listas.categoriasDespesa || [];
+        fillSelect('categoria', categorias);
+      }
+
+      function salvarLancamento(event) {
+        event.preventDefault();
+        const payload = {
+          id: value('id'),
+          data: value('data'),
+          tipo: value('tipo'),
+          categoria: value('categoria'),
+          subcategoria: value('subcategoria'),
+          descricao: value('descricao'),
+          forma: value('forma'),
+          conta: value('conta'),
+          valor: value('valor'),
+          status: value('statusLancamento'),
+          observacoes: value('observacoes')
+        };
+        const editando = Boolean(payload.id);
+        callServer('salvarLancamento', [payload], result => {
+          limparFormulario();
+          document.getElementById('filtroMes').value = payload.data.slice(0, 7);
+          showToast(editando
+            ? 'Lancamento atualizado com sucesso.'
+            : 'Lancamento salvo com sucesso.');
+
+          if (result && result.lancamento) {
+            const salvo = result.lancamento;
+            const index = state.lancamentos.findIndex(item => item.id === salvo.id);
+            if (index >= 0) state.lancamentos[index] = salvo;
+            else state.lancamentos.unshift(salvo);
+            renderLancamentos(state.lancamentos);
+          }
+
+          reloadApp(sincronizarAbasAuxiliares);
+        });
+      }
+
+      function salvarMeta(event) {
+        event.preventDefault();
+        const payload = {
+          categoria: value('metaCategoria'),
+          limiteMensal: value('metaLimite')
+        };
+        callServer('salvarMeta', [payload], () => {
+          document.getElementById('metaLimite').value = '';
+          showToast('Meta salva com sucesso.');
+          reloadApp(sincronizarAbasAuxiliares);
+        });
+      }
+
+      function editarLancamento(id) {
+        const item = state.lancamentos.find(lancamento => lancamento.id === id);
+        if (!item) return;
+        document.getElementById('id').value = item.id;
+        document.getElementById('data').value = item.data;
+        document.getElementById('tipo').value = item.tipo;
+        atualizarCategoriasPorTipo();
+        document.getElementById('categoria').value = item.categoria;
+        document.getElementById('subcategoria').value = item.subcategoria || '';
+        document.getElementById('descricao').value = item.descricao || '';
+        document.getElementById('forma').value = item.forma || '';
+        document.getElementById('conta').value = item.conta || '';
+        document.getElementById('valor').value = item.valor || '';
+        document.getElementById('statusLancamento').value = item.status || 'Pago';
+        document.getElementById('observacoes').value = item.observacoes || '';
+        document.getElementById('formLancamento').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+      function excluirLancamento(id) {
+        if (!confirm('Excluir este lancamento?')) return;
+        callServer('excluirLancamento', [id], () => {
+          state.lancamentos = state.lancamentos.filter(item => item.id !== id);
+          renderLancamentos(state.lancamentos);
+          showToast('Lancamento excluido com sucesso.');
+          reloadApp(sincronizarAbasAuxiliares);
+        });
+      }
+
+      function filtrarLancamentos() {
+        renderizarDadosFiltrados();
+      }
+
+      function renderizarDadosFiltrados(onComplete) {
+        const filtros = {
+          mes: value('filtroMes'),
+          tipo: value('filtroTipo'),
+          texto: value('filtroTexto')
+        };
+        callServer('listarLancamentos', [filtros], data => {
+          state.lancamentos = data || [];
+          renderLancamentos(state.lancamentos);
+          if (onComplete) onComplete();
+        });
+      }
+
+      function renderDashboard(dashboard, resumo) {
+        document.getElementById('receitasMes').textContent = currency(dashboard.receitasMes);
+        document.getElementById('despesasMes').textContent = currency(dashboard.despesasMes);
+        document.getElementById('saldoMes').textContent = currency(dashboard.saldoMes);
+        document.getElementById('maiorCategoria').textContent = dashboard.maiorCategoria || '-';
+        renderGraficoResumo(resumo || []);
+        renderGraficoCategorias(dashboard.porCategoria || []);
+      }
+
+      function renderGraficoResumo(resumo) {
+        const el = document.getElementById('graficoResumo');
+        const meses = resumo.slice(-12);
+        const maior = Math.max(1, ...meses.map(item => Math.max(Number(item.receitas || 0), Number(item.despesas || 0))));
+        el.innerHTML = '';
+        if (!meses.length) {
+          el.innerHTML = '<div class="empty">Sem dados para grafico.</div>';
+          return;
+        }
+        meses.forEach(item => {
+          const receitas = Number(item.receitas || 0);
+          const despesas = Number(item.despesas || 0);
+          const row = document.createElement('div');
+          row.className = 'bar-row';
+          row.innerHTML = `
+            <div class="bar-label">${escapeHtml(item.mes)}</div>
+            <div class="bar-track">
+              <div class="bar-receita" style="width:${Math.max(2, receitas / maior * 100)}%" title="${currency(receitas)}"></div>
+              <div class="bar-despesa" style="width:${Math.max(2, despesas / maior * 100)}%" title="${currency(despesas)}"></div>
+            </div>
+            <div class="bar-value">${currency(receitas - despesas)}</div>
+          `;
+          el.appendChild(row);
+        });
+      }
+
+      function renderGraficoCategorias(items) {
+        const el = document.getElementById('graficoCategorias');
+        const categorias = items.slice(0, 8);
+        const maior = Math.max(1, ...categorias.map(item => Number(item.total || 0)));
+        el.innerHTML = '';
+        if (!categorias.length) {
+          el.innerHTML = '<div class="empty">Sem despesas no mes atual.</div>';
+          return;
+        }
+        categorias.forEach(item => {
+          const total = Number(item.total || 0);
+          const row = document.createElement('div');
+          row.className = 'category-row';
+          row.innerHTML = `
+            <div class="category-meta">
+              <span>${escapeHtml(item.categoria)}</span>
+              <strong>${currency(total)}</strong>
+            </div>
+            <div class="category-track">
+              <div class="category-fill" style="width:${Math.max(2, total / maior * 100)}%"></div>
+            </div>
+          `;
+          el.appendChild(row);
+        });
+      }
+
+      function renderMetas(metas) {
+        const body = document.getElementById('metasBody');
+        body.innerHTML = '';
+        if (!metas.length) {
+          body.innerHTML = '<tr class="empty-row"><td class="empty" colspan="5">Nenhuma meta cadastrada.</td></tr>';
+          return;
+        }
+        metas.forEach(meta => {
+          const tr = document.createElement('tr');
+          const statusClass = meta.status === 'Acima da meta' ? 'danger-text' : (meta.status === 'Dentro da meta' ? 'ok' : 'warn');
+          tr.innerHTML = `
+            <td data-label="Categoria">${escapeHtml(meta.categoria)}</td>
+            <td data-label="Limite" class="money">${currency(meta.limiteMensal)}</td>
+            <td data-label="Gasto" class="money">${currency(meta.gastoMesAtual)}</td>
+            <td data-label="Diferenca" class="money">${currency(meta.diferenca)}</td>
+            <td data-label="Status"><span class="badge ${statusClass}">${escapeHtml(meta.status)}</span></td>
+          `;
+          body.appendChild(tr);
+        });
+      }
+
+      function renderLancamentos(items) {
+        const body = document.getElementById('lancamentosBody');
+        body.innerHTML = '';
+        if (!items.length) {
+          body.innerHTML = '<tr class="empty-row"><td class="empty" colspan="8">Nenhum lancamento encontrado.</td></tr>';
+          return;
+        }
+        items.forEach(item => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td data-label="Data">${formatDate(item.data)}</td>
+            <td data-label="Tipo"><span class="badge ${item.tipo}">${escapeHtml(item.tipo)}</span></td>
+            <td data-label="Categoria">${escapeHtml(item.categoria)}${item.subcategoria ? '<br><small>' + escapeHtml(item.subcategoria) + '</small>' : ''}</td>
+            <td data-label="Descricao">
+              ${escapeHtml(item.descricao)}
+              <br><small>${escapeHtml(item.forma || '')}${item.observacoes ? ' | ' + escapeHtml(item.observacoes) : ''}</small>
+            </td>
+            <td data-label="Conta">${escapeHtml(item.conta)}</td>
+            <td data-label="Status">${escapeHtml(item.status)}</td>
+            <td data-label="Valor" class="money">${currency(item.valor)}</td>
+            <td data-label="Acoes" class="table-actions">
+              <div class="table-action-buttons">
+                <button type="button" class="secondary" onclick="editarLancamento('${item.id}')">Editar</button>
+                <button type="button" class="danger" onclick="excluirLancamento('${item.id}')">Excluir</button>
+              </div>
+            </td>
+          `;
+          body.appendChild(tr);
+        });
+      }
+
+      function limparFormulario() {
+        document.getElementById('formLancamento').reset();
+        document.getElementById('id').value = '';
+        document.getElementById('data').value = new Date().toISOString().slice(0, 10);
+        atualizarCategoriasPorTipo();
+      }
+
+      function value(id) {
+        return document.getElementById(id).value;
+      }
+
+      function currency(value) {
+        return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      }
+
+      function formatDate(value) {
+        if (!value) return '';
+        const [year, month, day] = value.split('-');
+        return `${day}/${month}/${year}`;
+      }
+
+      function escapeHtml(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+    </script>
+  </body>
+</html>
