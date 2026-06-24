@@ -1,0 +1,478 @@
+const DEFAULT_LISTAS = {
+  tipos: ['Receita', 'Despesa'],
+  categoriasDespesa: ['Moradia', 'Alimentacao', 'Transporte', 'Saude', 'Educacao', 'Lazer', 'Assinaturas', 'Mercado', 'Cartao', 'Outros'],
+  categoriasReceita: ['Salario', 'Freelance', 'Investimentos', 'Reembolsos', 'Vendas', 'Presente', 'Outros'],
+  formas: ['Pix', 'Cartao Debito', 'Cartao Credito', 'Dinheiro', 'Boleto', 'Transferencia', 'Debito Automatico', 'Outros'],
+  contas: ['Conta Corrente', 'Carteira', 'Poupanca', 'Cartao 1', 'Cartao 2', 'Investimentos'],
+  status: ['Pago', 'Pendente', 'Previsto'],
+  subcategorias: ['', 'Aluguel', 'Condominio', 'Energia', 'Agua', 'Internet', 'Mercado', 'Combustivel', 'Medicamentos', 'Curso', 'Restaurante']
+};
+
+const PAGE_SIZE = 30;
+const state = {
+  listas: DEFAULT_LISTAS,
+  lancamentos: [],
+  metas: [],
+  dashboard: {},
+  resumo: [],
+  nextOffset: 0,
+  hasMore: false,
+  total: 0,
+  currentView: 'inicio',
+  filterTimer: null,
+  pendingRequests: 0
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('data').value = hojeIso();
+  document.getElementById('filtroMes').value = hojeIso().slice(0, 7);
+  popularSelects();
+  reloadApp();
+});
+
+function serverCall(method, args, options) {
+  args = args || [];
+  options = options || {};
+  if (!options.silent) setLoading(true);
+
+  return new Promise((resolve, reject) => {
+    const runner = google.script.run
+      .withSuccessHandler(result => {
+        if (!options.silent) setLoading(false);
+        resolve(result);
+      })
+      .withFailureHandler(error => {
+        if (!options.silent) setLoading(false);
+        const message = error && error.message ? error.message : String(error);
+        showToast(message, true);
+        reject(error);
+      });
+
+    if (method === 'getBootstrapData') runner.getBootstrapData(args[0]);
+    else if (method === 'setupPlanilha') runner.setupPlanilha();
+    else if (method === 'salvarLancamento') runner.salvarLancamento(args[0]);
+    else if (method === 'salvarMeta') runner.salvarMeta(args[0]);
+    else if (method === 'excluirLancamento') runner.excluirLancamento(args[0]);
+    else if (method === 'listarLancamentos') runner.listarLancamentos(args[0]);
+    else if (method === 'recalcularDadosAuxiliares') runner.recalcularDadosAuxiliares();
+    else reject(new Error('Método não suportado: ' + method));
+  });
+}
+
+async function reloadApp(options) {
+  options = options || {};
+  try {
+    const data = await serverCall('getBootstrapData', [filtrosAtuais(0)]);
+    state.listas = mergeListas(data && data.listas);
+    state.dashboard = data && data.dashboard || {};
+    state.resumo = data && data.resumo || [];
+    state.metas = data && data.metas || [];
+    aplicarPaginaLancamentos(data && data.lancamentos, false);
+    popularSelects();
+    renderDashboard();
+    renderMetas();
+    renderLancamentos();
+    if (options.toast) showToast(options.toast);
+  } catch (error) {
+    popularSelects();
+  }
+}
+
+async function setupPlanilha() {
+  try {
+    await serverCall('setupPlanilha');
+    await reloadApp({ toast: 'Planilha preparada com sucesso.' });
+  } catch (error) {}
+}
+
+function mostrarTela(nome) {
+  state.currentView = nome;
+  document.querySelectorAll('.app-view').forEach(view => {
+    view.classList.toggle('active', view.dataset.view === nome);
+  });
+  document.querySelectorAll('.bottom-nav button').forEach(button => {
+    button.classList.toggle('active', button.dataset.nav === nome);
+  });
+  document.querySelector('.fab').hidden = nome === 'novo';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function abrirNovoLancamento() {
+  limparFormulario();
+  mostrarTela('novo');
+}
+
+function cancelarFormulario() {
+  limparFormulario();
+  mostrarTela('lancamentos');
+}
+
+function popularSelects() {
+  state.listas = mergeListas(state.listas);
+  fillSelect('tipo', state.listas.tipos);
+  fillSelect('forma', state.listas.formas);
+  fillSelect('conta', state.listas.contas);
+  fillSelect('statusLancamento', state.listas.status);
+  fillSelect('metaCategoria', state.listas.categoriasDespesa);
+  fillDatalist('subcategoriasLista', state.listas.subcategorias);
+  atualizarCategoriasPorTipo();
+}
+
+function mergeListas(listas) {
+  listas = listas || {};
+  return {
+    tipos: listaValida(listas.tipos, DEFAULT_LISTAS.tipos),
+    categoriasDespesa: listaValida(listas.categoriasDespesa, DEFAULT_LISTAS.categoriasDespesa),
+    categoriasReceita: listaValida(listas.categoriasReceita, DEFAULT_LISTAS.categoriasReceita),
+    formas: listaValida(listas.formas, DEFAULT_LISTAS.formas),
+    contas: listaValida(listas.contas, DEFAULT_LISTAS.contas),
+    status: listaValida(listas.status, DEFAULT_LISTAS.status),
+    subcategorias: listaValida(listas.subcategorias, DEFAULT_LISTAS.subcategorias)
+  };
+}
+
+function listaValida(values, fallback) {
+  return values && values.length ? values : fallback.slice();
+}
+
+function fillSelect(id, values) {
+  const select = document.getElementById(id);
+  const current = select.value;
+  select.innerHTML = '';
+  values.forEach(value => {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = value || '-';
+    select.appendChild(option);
+  });
+  if (values.includes(current)) select.value = current;
+}
+
+function fillDatalist(id, values) {
+  const datalist = document.getElementById(id);
+  datalist.innerHTML = '';
+  values.filter(Boolean).forEach(value => {
+    const option = document.createElement('option');
+    option.value = value;
+    datalist.appendChild(option);
+  });
+}
+
+function atualizarCategoriasPorTipo() {
+  const tipo = value('tipo');
+  fillSelect('categoria', tipo === 'Receita' ? state.listas.categoriasReceita : state.listas.categoriasDespesa);
+}
+
+async function salvarLancamento(event) {
+  event.preventDefault();
+  const payload = {
+    id: value('id'),
+    data: value('data'),
+    tipo: value('tipo'),
+    categoria: value('categoria'),
+    subcategoria: value('subcategoria'),
+    descricao: value('descricao'),
+    forma: value('forma'),
+    conta: value('conta'),
+    valor: value('valor'),
+    status: value('statusLancamento'),
+    observacoes: value('observacoes')
+  };
+  const editando = Boolean(payload.id);
+
+  try {
+    const result = await serverCall('salvarLancamento', [payload]);
+    atualizarLancamentoLocal(result && result.lancamento);
+    limparFormulario();
+    mostrarTela('lancamentos');
+    renderLancamentos();
+    showToast(editando ? 'Lançamento atualizado.' : 'Lançamento salvo.');
+    atualizarDadosEmSegundoPlano();
+  } catch (error) {}
+}
+
+async function excluirLancamento(id) {
+  if (!confirm('Excluir este lançamento?')) return;
+  try {
+    await serverCall('excluirLancamento', [id]);
+    state.lancamentos = state.lancamentos.filter(item => item.id !== id);
+    state.total = Math.max(0, state.total - 1);
+    renderLancamentos();
+    showToast('Lançamento excluído.');
+    atualizarDadosEmSegundoPlano();
+  } catch (error) {}
+}
+
+function editarLancamento(id) {
+  const item = state.lancamentos.find(lancamento => lancamento.id === id);
+  if (!item) return;
+  document.getElementById('id').value = item.id;
+  document.getElementById('data').value = item.data;
+  document.getElementById('tipo').value = item.tipo;
+  atualizarCategoriasPorTipo();
+  document.getElementById('categoria').value = item.categoria;
+  document.getElementById('subcategoria').value = item.subcategoria || '';
+  document.getElementById('descricao').value = item.descricao || '';
+  document.getElementById('forma').value = item.forma || '';
+  document.getElementById('conta').value = item.conta || '';
+  document.getElementById('valor').value = item.valor || '';
+  document.getElementById('statusLancamento').value = item.status || 'Pago';
+  document.getElementById('observacoes').value = item.observacoes || '';
+  document.getElementById('formTitulo').textContent = 'Editar lançamento';
+  document.getElementById('formEyebrow').textContent = 'Atualização';
+  document.getElementById('salvarLancamentoButton').textContent = 'Atualizar lançamento';
+  mostrarTela('novo');
+}
+
+function atualizarLancamentoLocal(item) {
+  if (!item) return;
+  const index = state.lancamentos.findIndex(current => current.id === item.id);
+  if (index >= 0) state.lancamentos[index] = item;
+  else {
+    state.lancamentos.unshift(item);
+    state.total += 1;
+  }
+  state.lancamentos.sort((a, b) => new Date(b.data) - new Date(a.data));
+}
+
+async function salvarMeta(event) {
+  event.preventDefault();
+  const payload = { categoria: value('metaCategoria'), limiteMensal: value('metaLimite') };
+  try {
+    await serverCall('salvarMeta', [payload]);
+    document.getElementById('metaLimite').value = '';
+    showToast('Meta salva.');
+    atualizarDadosEmSegundoPlano();
+  } catch (error) {}
+}
+
+async function atualizarDadosEmSegundoPlano() {
+  try {
+    await serverCall('recalcularDadosAuxiliares', [], { silent: true });
+    await reloadApp();
+  } catch (error) {
+    console.error('Falha na atualização em segundo plano:', error);
+  }
+}
+
+function agendarFiltro() {
+  clearTimeout(state.filterTimer);
+  state.filterTimer = setTimeout(filtrarLancamentos, 400);
+}
+
+async function filtrarLancamentos() {
+  try {
+    const page = await serverCall('listarLancamentos', [filtrosAtuais(0)]);
+    aplicarPaginaLancamentos(page, false);
+    renderLancamentos();
+  } catch (error) {}
+}
+
+async function carregarMaisLancamentos() {
+  if (!state.hasMore) return;
+  try {
+    const page = await serverCall('listarLancamentos', [filtrosAtuais(state.nextOffset)]);
+    aplicarPaginaLancamentos(page, true);
+    renderLancamentos();
+  } catch (error) {}
+}
+
+function filtrosAtuais(offset) {
+  return {
+    mes: value('filtroMes'),
+    tipo: value('filtroTipo'),
+    texto: value('filtroTexto'),
+    limite: PAGE_SIZE,
+    offset: offset || 0
+  };
+}
+
+function aplicarPaginaLancamentos(page, append) {
+  page = page || {};
+  const items = page.items || [];
+  state.lancamentos = append ? state.lancamentos.concat(items) : items;
+  state.total = Number(page.total || 0);
+  state.hasMore = Boolean(page.hasMore);
+  state.nextOffset = Number(page.nextOffset || state.lancamentos.length);
+}
+
+function renderDashboard() {
+  const dashboard = state.dashboard || {};
+  document.getElementById('receitasMes').textContent = currency(dashboard.receitasMes);
+  document.getElementById('despesasMes').textContent = currency(dashboard.despesasMes);
+  document.getElementById('saldoMes').textContent = currency(dashboard.saldoMes);
+  document.getElementById('maiorCategoria').textContent = dashboard.maiorCategoria || '-';
+  document.getElementById('tituloMesAtual').textContent = formatMonth(dashboard.mesAtual);
+  renderGraficoResumo(state.resumo || []);
+  renderGraficoCategorias(dashboard.porCategoria || []);
+}
+
+function renderGraficoResumo(resumo) {
+  const el = document.getElementById('graficoResumo');
+  const meses = resumo.slice(-12);
+  const maior = Math.max(1, ...meses.map(item => Math.max(Number(item.receitas || 0), Number(item.despesas || 0))));
+  if (!meses.length) {
+    el.innerHTML = emptyState('Sem dados para o gráfico.');
+    return;
+  }
+  el.innerHTML = meses.map(item => {
+    const receitas = Number(item.receitas || 0);
+    const despesas = Number(item.despesas || 0);
+    return `
+      <div class="bar-row">
+        <div class="bar-label">${escapeHtml(formatMonth(item.mes, true))}</div>
+        <div class="bar-track">
+          <div class="bar-receita" style="width:${Math.max(2, receitas / maior * 100)}%"></div>
+          <div class="bar-despesa" style="width:${Math.max(2, despesas / maior * 100)}%"></div>
+        </div>
+        <div class="bar-value">${currency(receitas - despesas)}</div>
+      </div>`;
+  }).join('');
+}
+
+function renderGraficoCategorias(items) {
+  const el = document.getElementById('graficoCategorias');
+  const categorias = items.slice(0, 8);
+  const maior = Math.max(1, ...categorias.map(item => Number(item.total || 0)));
+  if (!categorias.length) {
+    el.innerHTML = emptyState('Sem despesas neste mês.');
+    return;
+  }
+  el.innerHTML = categorias.map(item => {
+    const total = Number(item.total || 0);
+    return `
+      <div class="category-row">
+        <div class="category-meta"><span>${escapeHtml(item.categoria)}</span><strong>${currency(total)}</strong></div>
+        <div class="category-track"><div class="category-fill" style="width:${Math.max(2, total / maior * 100)}%"></div></div>
+      </div>`;
+  }).join('');
+}
+
+function renderMetas() {
+  const el = document.getElementById('metasCards');
+  if (!state.metas.length) {
+    el.innerHTML = emptyState('Nenhuma meta cadastrada.');
+    return;
+  }
+  el.innerHTML = state.metas.map(meta => {
+    const limite = Number(meta.limiteMensal || 0);
+    const gasto = Number(meta.gastoMesAtual || 0);
+    const percentual = limite > 0 ? Math.min(gasto / limite * 100, 100) : 0;
+    const over = limite > 0 && gasto > limite;
+    return `
+      <article class="goal-card">
+        <div class="goal-header">
+          <strong>${escapeHtml(meta.categoria)}</strong>
+          <span>${escapeHtml(meta.status)}</span>
+        </div>
+        <div class="goal-progress"><div class="${over ? 'over' : ''}" style="width:${percentual}%"></div></div>
+        <div class="goal-footer">
+          <span>Gasto: ${currency(gasto)}</span>
+          <span>Limite: ${currency(limite)}</span>
+        </div>
+      </article>`;
+  }).join('');
+}
+
+function renderLancamentos() {
+  const el = document.getElementById('lancamentosCards');
+  document.getElementById('totalLancamentos').textContent = `${state.total} ${state.total === 1 ? 'item' : 'itens'}`;
+  document.getElementById('carregarMais').hidden = !state.hasMore;
+
+  if (!state.lancamentos.length) {
+    el.innerHTML = emptyState('Nenhum lançamento encontrado.');
+    return;
+  }
+
+  el.innerHTML = state.lancamentos.map(item => `
+    <article class="transaction-card">
+      <div class="transaction-main">
+        <div class="transaction-title">
+          <strong>${escapeHtml(item.descricao)}</strong>
+          <span>${escapeHtml(item.categoria)}${item.subcategoria ? ' • ' + escapeHtml(item.subcategoria) : ''}</span>
+        </div>
+        <span class="transaction-amount ${escapeHtml(item.tipo)}">${item.tipo === 'Despesa' ? '− ' : '+ '}${currency(item.valor)}</span>
+      </div>
+      <div class="transaction-footer">
+        <div class="transaction-meta">
+          ${formatDate(item.data)} • ${escapeHtml(item.conta || '')}<br>
+          <span class="badge">${escapeHtml(item.status || '')}</span>
+        </div>
+        <div class="card-actions">
+          <button type="button" class="secondary" onclick="editarLancamento('${escapeAttribute(item.id)}')">Editar</button>
+          <button type="button" class="danger" onclick="excluirLancamento('${escapeAttribute(item.id)}')">Excluir</button>
+        </div>
+      </div>
+    </article>`).join('');
+}
+
+function limparFormulario() {
+  document.getElementById('formLancamento').reset();
+  document.getElementById('id').value = '';
+  document.getElementById('data').value = hojeIso();
+  document.getElementById('formTitulo').textContent = 'Novo lançamento';
+  document.getElementById('formEyebrow').textContent = 'Cadastro';
+  document.getElementById('salvarLancamentoButton').textContent = 'Salvar lançamento';
+  popularSelects();
+}
+
+function setLoading(active) {
+  state.pendingRequests += active ? 1 : -1;
+  state.pendingRequests = Math.max(0, state.pendingRequests);
+  document.getElementById('loadingOverlay').hidden = state.pendingRequests === 0;
+}
+
+function showToast(message, isError) {
+  const el = document.getElementById('toast');
+  el.textContent = message;
+  el.classList.toggle('error', Boolean(isError));
+  el.classList.add('show');
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+function value(id) {
+  return document.getElementById(id).value;
+}
+
+function hojeIso() {
+  const date = new Date();
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 10);
+}
+
+function currency(value) {
+  return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function formatDate(value) {
+  if (!value) return '';
+  const parts = String(value).split('-');
+  return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : value;
+}
+
+function formatMonth(value, short) {
+  if (!value) return 'Mês atual';
+  const parts = String(value).split('-');
+  if (parts.length !== 2) return value;
+  const date = new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
+  const text = date.toLocaleDateString('pt-BR', { month: short ? 'short' : 'long', year: short ? undefined : 'numeric' });
+  return text.charAt(0).toUpperCase() + text.slice(1).replace('.', '');
+}
+
+function emptyState(message) {
+  return `<div class="empty-state">${escapeHtml(message)}</div>`;
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function escapeAttribute(value) {
+  return String(value || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}

@@ -69,6 +69,7 @@ const CONFIG = {
 function doGet() {
   return HtmlService.createTemplateFromFile('Index')
     .evaluate()
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover')
     .setTitle('Gestao Financeira Pessoal')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -125,14 +126,14 @@ function diagnosticarProjeto() {
 
 function getBootstrapData(filtros) {
   filtros = filtros || {};
-  if (!filtros.limite) filtros.limite = 200;
+  if (!filtros.limite) filtros.limite = 30;
   const lancamentos = getLancamentosNormalizados_();
   return {
     listas: getListas(lancamentos),
     dashboard: getDashboardSemSetup_(lancamentos),
     resumo: getResumoMensalSemSetup_(lancamentos),
     metas: getMetasSemSetup_(lancamentos),
-    lancamentos: listarLancamentosSemSetup_(filtros, lancamentos)
+    lancamentos: paginarLancamentos_(filtros, lancamentos)
   };
 }
 
@@ -219,13 +220,12 @@ function excluirLancamento(id) {
 }
 
 function listarLancamentos(filtros) {
-  return listarLancamentosSemSetup_(filtros);
+  return paginarLancamentos_(filtros);
 }
 
 function listarLancamentosSemSetup_(filtros, lancamentos) {
   filtros = filtros || {};
   const values = lancamentos || getLancamentosNormalizados_();
-  const limite = Number(filtros.limite || 200);
   const mes = filtros.mes || '';
   const tipo = filtros.tipo || '';
   const texto = String(filtros.texto || '').toLowerCase();
@@ -240,8 +240,24 @@ function listarLancamentosSemSetup_(filtros, lancamentos) {
         .toLowerCase()
         .indexOf(texto) >= 0;
     })
-    .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
-    .slice(0, limite);
+    .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+}
+
+function paginarLancamentos_(filtros, lancamentos) {
+  filtros = filtros || {};
+  const limite = Math.min(Math.max(Number(filtros.limite || 30), 1), 100);
+  const offset = Math.max(Number(filtros.offset || 0), 0);
+  const filtrados = listarLancamentosSemSetup_(filtros, lancamentos);
+  const items = filtrados.slice(offset, offset + limite);
+
+  return {
+    items,
+    total: filtrados.length,
+    offset,
+    limite,
+    hasMore: offset + items.length < filtrados.length,
+    nextOffset: offset + items.length
+  };
 }
 
 function getDashboard() {

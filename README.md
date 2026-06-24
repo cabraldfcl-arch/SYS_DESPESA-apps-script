@@ -5,7 +5,9 @@ Este projeto transforma a planilha em uma base de dados no Google Sheets e usa H
 ## Arquivos
 
 - `Code.gs`: backend Apps Script, regras de negocio, criacao das abas e calculos.
-- `Index.html`: tela web para cadastrar, editar, excluir e consultar lancamentos.
+- `Index.html`: estrutura da tela web.
+- `Styles.html`: estilos responsivos e navegacao mobile-first.
+- `Scripts.html`: interacoes, renderizacao, filtros e chamadas ao Apps Script.
 - `appsscript.json`: configuracao do projeto Apps Script.
 
 ## Como instalar
@@ -17,6 +19,8 @@ Este projeto transforma a planilha em uma base de dados no Google Sheets e usa H
 5. Crie/cole os arquivos:
    - `Code.gs`
    - `Index.html`
+   - `Styles.html`
+   - `Scripts.html`
    - `appsscript.json`
 6. Se o Apps Script foi criado dentro da propria planilha, rode `setupPlanilha`.
 7. Se o Apps Script foi criado como projeto separado, copie o ID da URL do Google Sheets e escolha uma das formas:
@@ -30,6 +34,14 @@ Este projeto transforma a planilha em uma base de dados no Google Sheets e usa H
    - Executar como: `Eu`.
    - Quem pode acessar: `Somente eu` ou conforme sua necessidade.
 12. Abra a URL gerada.
+
+## Uso no celular
+
+- A interface usa navegacao inferior com telas separadas para inicio, lancamentos, metas e cadastro.
+- Os lancamentos sao exibidos como cartoes no celular.
+- A listagem carrega 30 registros por vez; use `Carregar mais` para consultar registros antigos.
+- A busca aguarda alguns milissegundos antes de consultar o servidor, reduzindo chamadas durante a digitacao.
+- Ao alterar qualquer arquivo, crie uma nova versao da implantacao para atualizar a URL `/exec`.
 
 ## Orientacoes para a planilha
 
